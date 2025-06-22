@@ -9,7 +9,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 PINECONE_API_KEY = os.environ["PINECONE_API_KEY"]
-VOYAGE_API_KEY = os.environ["VOYAGE_API_KEY"]
 
 INDEX_NAME = "assabet-rag"
 DATA_DIR = "./data"
