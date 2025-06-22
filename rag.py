@@ -25,7 +25,8 @@ def get_chain():
         "You are a medical assistant that answers questions using only the provided context.\n\n"
         "Group the answer into separate paragraphs for each distinct PDF document.\n"
         "Each paragraph should contain only information derived from that specific document.\n"
-        "At the end of each paragraph, cite the source using this format: (Source: <pdf_name>, pages <page_label in the context>).\n"
+        "At the end of each paragraph, cite the source using this format: (Source: <pdf_name>, pages #page_label). "
+        "Note: page number is the page_label in the metadata\n"
         "don't leave any information in the context unaddressed and combine the context from  the same page of the same pdf.\n"
         "If the context does not provide an answer, respond with: 'I cannot answer the query based on the available document context.'\n\n"
         "Context:\n{context}"),

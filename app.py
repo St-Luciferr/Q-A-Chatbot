@@ -7,6 +7,7 @@ import base64
 def show_pdf(file_path, page=None):
     with open(file_path, "rb") as f:
         base64_pdf = base64.b64encode(f.read()).decode("utf-8")
+    page=int(page)+1
     page_anchor = f"#page={page}" if page else ""
     pdf_display = f'<iframe src="data:application/pdf;base64,{base64_pdf}{page_anchor}" width="700" height="500" type="application/pdf"></iframe>'
     st.markdown(pdf_display, unsafe_allow_html=True)
@@ -46,7 +47,7 @@ with right:
         source_documents = {}
         for doc in result["context"]:
             name = os.path.basename(doc.metadata.get("source", "Unknown.pdf"))
-            page = str(doc.metadata.get("page_label", "unknown"))
+            page = str(doc.metadata.get("page", "unknown"))
 
             if name not in source_documents:
                 source_documents[name] = set()

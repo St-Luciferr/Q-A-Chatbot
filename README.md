@@ -22,6 +22,10 @@ python ingest.py
 streamlit run app.py
 ```
 
+## Usage Demo:
+The Streamlit-based chat interface presents the conversation history on the left and dynamically displays the reference documents related to the current response on the right, including the ability to preview cited PDF documents directly within the interface.
+
+![demo](./assets/running_demo.JPG)
 
 ## Developer Note: 
 I developed a context-aware Retrieval-Augmented Generation (RAG) chatbot tailored for interacting with medical documents. The system is designed with a strong emphasis on accuracy, traceability, and factual reliability.
