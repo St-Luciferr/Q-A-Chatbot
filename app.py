@@ -45,12 +45,13 @@ if query := st.chat_input("What are the side effects of azithromycin?"):
 
 with right:
     st.markdown("### References")
-    source_map = format_sources(st.session_state["context"])
-    for name, pages in source_map.items():
-        for page in sorted(pages):
-            if st.button(f"View {name} (page {page})", key=f"{name}-{page}"):
-                st.session_state["selected_pdf"] = quote(name)
-                st.session_state["selected_page"] = page
+    if "context" in st.session_state:
+        source_map = format_sources(st.session_state["context"])
+        for name, pages in source_map.items():
+            for page in sorted(pages):
+                if st.button(f"View {name} (page {page})", key=f"{name}-{page}"):
+                    st.session_state["selected_pdf"] = quote(name)
+                    st.session_state["selected_page"] = page
 
     if st.session_state["selected_pdf"]:
         st.markdown("### Preview")

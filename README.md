@@ -22,7 +22,10 @@ python ingest.py
 streamlit run app.py
 ```
 
+## Usage Demo:
+The Streamlit-based chat interface presents the conversation history on the left and dynamically displays the reference documents related to the current response on the right, including the ability to preview cited PDF documents directly within the interface.
 
+![demo](./assets/running_demo.JPG)
 
 ## Developer Note: Medical RAG Chatbot with LlamaIndex, Pinecone & Jina Reranker
 I designed and implemented a modular Retrieval-Augmented Generation (RAG) chatbot optimized for querying medical documents with high factual accuracy and citation transparency.
