@@ -1,33 +1,53 @@
-from langchain_community.document_loaders import PyPDFLoader
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
-from langchain_community.vectorstores import FAISS
 import os
+from pinecone import Pinecone,  ServerlessSpec
+from llama_index.core import SimpleDirectoryReader, VectorStoreIndex, StorageContext
+from llama_index.core.node_parser import SentenceSplitter
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
+from llama_index.vector_stores.pinecone import PineconeVectorStore
+from dotenv import load_dotenv
 
+load_dotenv()
+
+PINECONE_API_KEY = os.environ["PINECONE_API_KEY"]
+VOYAGE_API_KEY = os.environ["VOYAGE_API_KEY"]
+
+INDEX_NAME = "assabet-rag"
 DATA_DIR = "./data"
-INDEX_DIR = "./index"
-MODEL_NAME = "abhinand/MedEmbed-large-v0.1"
 
-def load_documents():
-    documents = []
-    for filename in os.listdir(DATA_DIR):
-        if filename.endswith(".pdf"):
-            loader = PyPDFLoader(os.path.join(DATA_DIR, filename))
-            documents.extend(loader.load())
 
-    splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
-    chunks = splitter.split_documents(documents)
-    return chunks
+def ingest_documents():
+    docs = SimpleDirectoryReader(DATA_DIR).load_data()
 
-def get_vectorstore():
-    embeddings = HuggingFaceEmbeddings(model_name=MODEL_NAME)
+    # Embed using hugging face medembed model fine tuned for medical documents
+    embed_model = HuggingFaceEmbedding(
+        model_name="abhinand/MedEmbed-large-v0.1")
+    text_splitter = SentenceSplitter.from_defaults(
+        chunk_size=500,
+        chunk_overlap=100
+    )
 
-    if os.path.exists(os.path.join(INDEX_DIR, "index.faiss")):
-        print("Loading existing FAISS index...")
-        vectorstore = FAISS.load_local(INDEX_DIR, embeddings, allow_dangerous_deserialization=True)
-    else:
-        print("Index not found, building new FAISS index...")
-        docs = load_documents()
-        vectorstore = FAISS.from_documents(docs, embeddings)
-        vectorstore.save_local(INDEX_DIR)
-    return vectorstore
+    pc = Pinecone(api_key=PINECONE_API_KEY, spec=ServerlessSpec(
+        region="us-east-1",
+        scale_to_zero=True,))
+    if not pc.has_index(INDEX_NAME):
+        pc.create_index(INDEX_NAME, dimension=1024, metric="cosine", spec=ServerlessSpec(
+            region="us-east-1",
+            cloud="aws"
+        ))
+    pinecone_index = pc.Index(INDEX_NAME)
+    vector_store = PineconeVectorStore(pinecone_index=pinecone_index)
+    storage_context = StorageContext.from_defaults(
+        vector_store=vector_store
+    )
+
+    index = VectorStoreIndex.from_documents(
+        docs,
+        storage_context=storage_context,
+        embed_model=embed_model,
+        transformations=[text_splitter])
+    print(f"Ingested {len(docs)} documents into Pinecone.")
+    return index
+
+
+if __name__ == "__main__":
+    ingest_documents()

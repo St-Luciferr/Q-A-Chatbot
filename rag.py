@@ -1,48 +1,80 @@
 import os
+from openai import OpenAI
+from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from dotenv import load_dotenv
-
-from langchain.chains.combine_documents import create_stuff_documents_chain
-from langchain.chains.retrieval import create_retrieval_chain
-from langchain_openai import ChatOpenAI
-from langchain.prompts import ChatPromptTemplate
-from langchain_core.vectorstores import VectorStoreRetriever
-from ingest import get_vectorstore
-from langchain_core.prompts import PromptTemplate
+from pinecone import Pinecone
+import requests
+import json
 
 load_dotenv()
+
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
+JINA_API_KEY = os.getenv("JINA_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-BASE_URL = os.getenv("BASE_URL", "https://models.inference.ai.azure.com")
-MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o-mini")
+INDEX_NAME = "assabet-rag"
+BASE_URL = os.getenv("BASE_URL", "https://api.openai.com/v1")
+
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"),
+                base_url=BASE_URL
+                )
 
 
-def get_chain():
-    vectorstore = get_vectorstore()
-    retriever: VectorStoreRetriever = vectorstore.as_retriever(search_kwargs={
-                                                               "k": 5})
+def get_top_contexts(query, top_k=5):
+    pc = Pinecone(api_key=PINECONE_API_KEY)
+    embed_model = HuggingFaceEmbedding(
+        model_name="abhinand/MedEmbed-large-v0.1")
+    query_emb = embed_model.get_query_embedding(query)
+    index = pc.Index(INDEX_NAME)
+    results = index.query(vector=query_emb, top_k=top_k, include_metadata=True)
+    contexts = [match.metadata for match in results.matches]
 
-    prompt = ChatPromptTemplate.from_messages([
-        ("system",
-        "You are a medical assistant that answers questions using only the provided context.\n\n"
-        "Group the answer into separate paragraphs for each distinct PDF document.\n"
-        "Each paragraph should contain only information derived from that specific document.\n"
-        "At the end of each paragraph, cite the source using this format: (Source: <pdf_name>, pages <page_label in the context>).\n"
-        "don't leave any information in the context unaddressed and combine the context from  the same page of the same pdf.\n"
-        "If the context does not provide an answer, respond with: 'I cannot answer the query based on the available document context.'\n\n"
-        "Context:\n{context}"),
-        
-        ("human", "{input}")
-    ])
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization":  f"Bearer {JINA_API_KEY}"
+    }
+    data = {
+        "model": "jina-reranker-v2-base-multilingual",
+        "query": query,
+        "top_n": 3,
+        "documents": [json.loads(c["_node_content"])["text"] for c in contexts],
+    }
+    try:
+        res = requests.post(
+            "https://api.jina.ai/v1/rerank", json=data, headers=headers
+        )
+        res.raise_for_status()
+        reranked = res.json()
+        reranked = reranked["results"]
+        return [contexts[r["index"]] for r in reranked]
+    except:
+        return contexts
 
-    llm = ChatOpenAI(api_key=OPENAI_API_KEY, model=MODEL_NAME,
-                     base_url=BASE_URL, temperature=0.0)
 
-    document_prompt = PromptTemplate.from_template(
-        "{page_content}\n(Source: {source}, page {page})"
+def get_llm_answer(query: str, contexts: list[dict]) -> str:
+    context_str = ""
+    for doc in contexts:
+        source = json.loads(doc["_node_content"])["metadata"]["file_name"] 
+        page = json.loads(doc["_node_content"])["metadata"]["page_label"] 
+        text = json.loads(doc["_node_content"])["text"]
+        context_str += f"{text}\n(Source: {source}, page {page})\n\n"
+
+    system_prompt = f"""You are a medical assistant that answers questions using only the provided context.
+        Group the answer into separate paragraphs for each distinct PDF document.
+        Each paragraph should contain only information derived from that specific document.
+        At the end of each paragraph, cite the source using this format: (Source: <pdf_name>, pages #).
+        don't leave any information in the context unaddressed and combine the context from  the same page of the same pdf.
+        If the context does not provide an answer, respond with: 'I cannot answer the query based on the available document context.
+        Context:\n{context_str}
+    """
+
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": f"Question: {query}"}
+    ]
+
+    response = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=messages,
+        temperature=0
     )
-    qa_chain = create_stuff_documents_chain(
-        llm, prompt, document_prompt=document_prompt)
-    rag_chain = create_retrieval_chain(
-        retriever=retriever, combine_docs_chain=qa_chain)
-    
-
-    return rag_chain
+    return response.choices[0].message.content.strip()

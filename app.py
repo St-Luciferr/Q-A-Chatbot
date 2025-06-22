@@ -1,8 +1,9 @@
 import streamlit as st
-from rag import get_chain
-from urllib.parse import quote
-import os
 import base64
+from rag import get_top_contexts
+from utils import format_sources
+from urllib.parse import quote
+from rag import get_llm_answer
 
 def show_pdf(file_path, page=None):
     with open(file_path, "rb") as f:
@@ -12,20 +13,21 @@ def show_pdf(file_path, page=None):
     st.markdown(pdf_display, unsafe_allow_html=True)
 
 st.set_page_config(page_title="Azithromycin RAG Chatbot",layout="wide")
-st.title("Medicinal Q&A Chatbot")
-
-if "chain" not in st.session_state:
-    st.session_state["chain"] = get_chain()
+st.title("Medical Q&A Chatbot")
 
 if "messages" not in st.session_state:
     st.session_state["messages"] = []
 
+if "selected_pdf" not in st.session_state:
+    st.session_state["selected_pdf"] = None
+    st.session_state["selected_page"] = None
+
 left, right = st.columns([0.6, 0.4], gap="medium")
 
 with left:
-    for message in st.session_state["messages"]:
-        with st.chat_message(message["role"]):
-            st.markdown(message["content"])
+    for msg in st.session_state["messages"]:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
 
 if query := st.chat_input("What are the side effects of azithromycin?"):
     st.session_state["messages"].append({"role": "user", "content": query})
@@ -33,33 +35,24 @@ if query := st.chat_input("What are the side effects of azithromycin?"):
         with st.chat_message("user"):
             st.markdown(query)
 
+    st.session_state["context"] = get_top_contexts(query)
+    answer = get_llm_answer(query, st.session_state["context"])
+
+    st.session_state["messages"].append({"role": "assistant", "content": answer})
+    with left:
         with st.chat_message("assistant"):
-            result = st.session_state["chain"].invoke({"input": query})
-            st.markdown(result["answer"])
-        st.session_state["messages"].append({"role": "assistant", "content": result["answer"]})
-        st.session_state["last_result"] = result  
+            st.markdown(answer)
 
 with right:
-    st.markdown("### Referenced Documents")
-    result = st.session_state.get("last_result")
-    if result:
-        source_documents = {}
-        for doc in result["context"]:
-            name = os.path.basename(doc.metadata.get("source", "Unknown.pdf"))
-            page = str(doc.metadata.get("page_label", "unknown"))
+    st.markdown("### References")
+    source_map = format_sources(st.session_state["context"])
+    for name, pages in source_map.items():
+        for page in sorted(pages):
+            if st.button(f"View {name} (page {page})", key=f"{name}-{page}"):
+                st.session_state["selected_pdf"] = quote(name)
+                st.session_state["selected_page"] = page
 
-            if name not in source_documents:
-                source_documents[name] = set()
-            source_documents[name].add(page)
-
-        for name, pages in source_documents.items():
-            for page in sorted(pages):
-                label = f"{name} (page {page})"
-                if st.button(f"📄 View {label}", key=f"{name}-{page}"):
-                    st.session_state["selected_pdf"] = quote(name)
-                    st.session_state["selected_page"] = page
-
-        if "selected_pdf" in st.session_state:
-            st.markdown("### 📖 Preview")
-            file_path = f"./data/{st.session_state['selected_pdf']}"
-            show_pdf(file_path, page=st.session_state["selected_page"])
+    if st.session_state["selected_pdf"]:
+        st.markdown("### Preview")
+        file_path = f"./data/{st.session_state['selected_pdf']}"
+        show_pdf(file_path, page=st.session_state['selected_page'])
