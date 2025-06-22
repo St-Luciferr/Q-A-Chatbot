@@ -31,3 +31,8 @@ def get_vectorstore():
         vectorstore = FAISS.from_documents(docs, embeddings)
         vectorstore.save_local(INDEX_DIR)
     return vectorstore
+
+if __name__ == "__main__":
+    vectorstore = get_vectorstore()
+    print(f"Vectorstore created with {len(vectorstore)} documents.")
+    print("Index saved to:", INDEX_DIR)
