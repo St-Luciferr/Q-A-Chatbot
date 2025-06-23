@@ -76,3 +76,5 @@ The retrieved and reranked context is then passed into an LLM (OpenAI GPT) along
 - Indicate when an answer is not present in the context.
 
 The user interface is built in Streamlit, providing a clean and responsive chat experience. Users can not only ask medical questions in natural language but also preview the source PDFs and navigate to the cited sections.
+
+ℹ️ **Note:** For Implementation using **Langchain**, click [here](https://github.com/St-Luciferr/Q-A-Chatbot/tree/main).
