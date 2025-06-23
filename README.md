@@ -68,3 +68,5 @@ To begin, I used LangChain to orchestrate the pipeline and FAISS as the vector s
 For each user query, the system retrieves the top-k semantically relevant chunks from FAISS using similarity search. These are injected into a carefully crafted prompt and passed to OpenAI’s GPT model with a low temperature setting to minimize hallucinations and encourage consistency. The prompt directs the model to generate responses strictly grounded in the retrieved content and to include per-paragraph source citations, followed by a summarized reference list.
 
 The frontend was built with Streamlit, providing an intuitive and responsive interface for querying medical knowledge in natural language.
+
+> ℹ️ **Note:** For implementation using **LlamaIndex**, click [here](https://github.com/St-Luciferr/Q-A-Chatbot/tree/llamaindex).
