@@ -1,26 +1,59 @@
-# Setup Instructions
+# Q&A Chatbot
 
-## 1. Install dependencies
+An interactive chatbot that answers questions based on your custom documents using retrieval-augmented generation (RAG) and LLMs.
+
+---
+
+##  Project Setup
+
+### 1. Clone the repository
+```bash
+git clone https://github.com/St-Luciferr/Q-A-Chatbot.git
+cd Q-A-Chatbot
+```
+### 2. Set up a virtual environment
+Windows:
+```bash
+python -m venv .venv
+.venv\Scripts\activate
+```
+Linux/macOS:
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+### 3. Install the required dependencies
 ```bash
 pip install -r requirements.txt
 ```
-
-## 2. Copy the env-example to .env
+### 4. Configure environment variables
+Copy the example environment config to .env:
 ```bash
 cp .env.example .env
+``` 
+You need to modify values in .env with your values.
+
+## 📁 Document Setup (Required for chatbot to work)
+This project uses local documents as the knowledge base.
+### 1. Create a folder named `data/`:
+```bash
+mkdir data
 ```
+### 2. Place your pdf documents inside the `data/` folder.
+⚠️ The `data/` folder is excluded from repository.
 
-## 3. Put the documents into `data/` folder.
-
-## 4. Run document Ingestion:
+## Run Document Ingestion
+This will parse the documents and create a searchable vector index:
 ```bash
 python ingest.py
 ```
-
-## 5. Run the Chatbot:
-```
+This step must be repeated if you add or change documents in the data/ folder.
+##  Launch the Chatbot
+Start the chatbot interface using Streamlit:
+```bash
 streamlit run app.py
 ```
+Open the link that appears in your terminal (http://localhost:8501) in a web browser.
 
 ## Usage Demo:
 The Streamlit-based chat interface presents the conversation history on the left and dynamically displays the reference documents related to the current response on the right, including the ability to preview cited PDF documents directly within the interface.
