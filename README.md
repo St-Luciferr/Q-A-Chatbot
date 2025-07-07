@@ -59,6 +59,7 @@ Open the link that appears in your terminal (http://localhost:8501) in a web bro
 The Streamlit-based chat interface presents the conversation history on the left and dynamically displays the reference documents related to the current response on the right, including the ability to preview cited PDF documents directly within the interface.
 
 ![demo](./assets/running_demo.JPG)
+The live running demo can be found [here](https://medicalragbot.streamlit.app/)
 
 ## Developer Note: Medical RAG Chatbot with LlamaIndex, Pinecone & Jina Reranker
 I designed and implemented a modular Retrieval-Augmented Generation (RAG) chatbot optimized for querying medical documents with high factual accuracy and citation transparency.
